@@ -78,21 +78,21 @@ narednim tutorijalima.
 */
 
 func ConcFunc() {
-	fmt.Println("\n --- Uvod u konkurentnost  ---")
+	fmt.Println("\n --- Intro to concurency  ---")
 
-	goroutineFunc()
-	goroutineWithTimeOutFunc()
-	goroutineMultiFunc()
-	channelFunc()
-	goroutineChannelFunc()
-	goroutineChannelSleepFunc()
-	goroutineCalcSquaresAndCubes()
+	concGoFunc()
+	concGoWithTimeOutFunc()
+	concGoMultiFunc()
+	concChannelFunc()
+	concGoChannelFunc()
+	concGoChannelSleepFunc()
+	concGoCalcSquaresAndCubes()
 	// channelPanic()
 	// unidirectionalCannels()
-	convBiToUniDirectionChannel()
-	goroutineChannelClose()
-	goroutineChannelCloseForRange()
-	goroutineMulti()
+	concConvBiToUniChannel()
+	concGoChannelClose()
+	concGoChannelCloseForRange()
+	concGoMultiFunc2()
 }
 
 /*
@@ -133,9 +133,9 @@ func hello() {
 	fmt.Println("Hello world goroutine")
 }
 
-func goroutineFunc() {
+func concGoFunc() {
 
-	fmt.Println("\n --- Goroutine ---")
+	fmt.Println("\n --- concGoFunc ---")
 
 	go hello()
 	fmt.Println("main function")
@@ -169,9 +169,9 @@ gorutina nije dobila priliku da se pokrene.
 Hajde da ovo sada popravimo.
 */
 
-func goroutineWithTimeOutFunc() {
+func concGoWithTimeOutFunc() {
 
-	fmt.Println("\n --- Goroutine With TimeOut Func---")
+	fmt.Println("\n --- concGoWithTimeOutFunc---")
 
 	go hello()
 	time.Sleep(1 * time.Second) // Make pause 1 sec.
@@ -211,9 +211,9 @@ func alphabets() {
 	}
 }
 
-func goroutineMultiFunc() {
+func concGoMultiFunc() {
 
-	fmt.Println("\n Multi goroutine ---")
+	fmt.Println("\n concGoMultiFunc ---")
 
 	go numbers()
 	go alphabets()
@@ -277,9 +277,9 @@ biti definisan koristeći make, slično mapama i isečcima.
 Hajde da napišemo kod koji deklariše kanal.
 */
 
-func channelFunc() {
+func concChannelFunc() {
 
-	fmt.Println("\n --- Funkcija kanala ---")
+	fmt.Println("\n --- concChannelFunc ---")
 
 	var a chan int
 	fmt.Println("channel a is nil, going to define it")
@@ -359,9 +359,9 @@ func helloChannel(done chan bool) {
 	done <- true // Write to channel done
 }
 
-func goroutineChannelFunc() {
+func concGoChannelFunc() {
 
-	fmt.Println("\n --- goroutineChannelFunc ---")
+	fmt.Println("\n --- concGoChannelFunc ---")
 
 	done := make(chan bool)
 	go helloChannel(done)
@@ -401,9 +401,9 @@ func helloChannelSleep(done chan bool) {
 	done <- true
 }
 
-func goroutineChannelSleepFunc() {
+func concGoChannelSleepFunc() {
 
-	fmt.Println("\n --- goroutineChannelSleepFunc ---")
+	fmt.Println("\n --- concGoChannelSleepFunc ---")
 
 	done := make(chan bool)
 	fmt.Println("Main going to call hello go goroutine")
@@ -456,9 +456,9 @@ func calcCubes(number int, cubeop chan int) {
 	cubeop <- sum
 }
 
-func goroutineCalcSquaresAndCubes() {
+func concGoCalcSquaresAndCubes() {
 
-	fmt.Println("\n ---goroutineCalcSquareAndCubws ---")
+	fmt.Println("\n ---concGoCalcSquareAndCubes ---")
 
 	number := 567
 	sqrch := make(chan int)
@@ -545,9 +545,9 @@ func sendData(sendch chan<- int) {
 	sendch <- 10
 }
 
-func convBiToUniDirectionChannel() {
+func concConvBiToUniChannel() {
 
-	fmt.Println("\n --- Conversion bi to uni-direction channel --- ")
+	fmt.Println("\n --- concConvBiToUniChannel --- ")
 
 	chnl := make(chan int)
 	go sendData(chnl)   // Conversion
@@ -584,9 +584,9 @@ func producer(chnl chan int) {
 	close(chnl)
 }
 
-func goroutineChannelClose() {
+func concGoChannelClose() {
 
-	fmt.Println("\n --- goroutine channel close --- ")
+	fmt.Println("\n --- concGoChannelClose --- ")
 
 	ch := make(chan int)
 	go producer(ch)
@@ -629,9 +629,9 @@ func producerForRange(chnl chan int) {
 	close(chnl)
 }
 
-func goroutineChannelCloseForRange() {
+func concGoChannelCloseForRange() {
 
-	fmt.Println("\n --- gooutine channel close for range ---")
+	fmt.Println("\n --- concGoChannelCloseForRange ---")
 
 	ch := make(chan int)
 	go producerForRange(ch)
@@ -693,9 +693,9 @@ func calcCubes2(number int, cubeop chan int) {
 	cubeop <- sum
 }
 
-func goroutineMulti() {
+func concGoMultiFunc2() {
 
-	fmt.Println("\n --- Goroutine multi ---")
+	fmt.Println("\n --- concGoMultiFunc2 ---")
 
 	number := 333
 	sqrch := make(chan int)

@@ -19,7 +19,8 @@ import (
 	// structs "learngo/16-structs"
 	// methods "learngo/17-methods"
 	// ifaces "learngo/18-interfaces"
-	cnc "learngo/19-conc"
+	conc "learngo/19-conc"
+	// conc2 "learngo/20-conc2"
 )
 
 func main() {
@@ -42,5 +43,6 @@ func main() {
 	// structs.StructFuncs()
 	// methods.MethodFuncs()
 	// ifaces.InterfaceFuncs()
-	cnc.ConcFunc()
+	conc.ConcFunc()
+	// conc2.Conc2Func()
 }
