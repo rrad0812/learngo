@@ -282,11 +282,10 @@ func channelFunc() {
 	fmt.Println("\n --- Funkcija kanala ---")
 
 	var a chan int
-	if a == nil {
-		fmt.Println("channel a is nil, going to define it")
-		a = make(chan int)
-		fmt.Printf("Type of a is %T\n", a)
-	}
+	fmt.Println("channel a is nil, going to define it")
+	a = make(chan int)
+	fmt.Printf("Type of a is %T\n", a)
+
 }
 
 /*
