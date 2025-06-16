@@ -1,6 +1,6 @@
 /*
 Baferovani kanali i worker pool-ovi
-==================================
+===================================
 
 Svi kanali o kojima smo govorili u prethodnom tutorijalu su u osnovi bili
 nebaferovani. Kao što smo detaljno objasnili u tutorijalu o kanalima, slanje i
@@ -20,18 +20,22 @@ Kapacitet za nebaferovani kanal je podrazumevano 0 i stoga smo izostaviljali
 parametar kapaciteta prilikom kreiranja nebaferovanih kanala u prethodnom
 tutorijalu.
 
-Hajde da napišemo malo koda i kreiramo baferovani kanal.
+Primer 1
+--------
 */
 
 package conc2
 
 import (
 	"fmt"
+	"sync"
+	"time"
 )
 
 func conc2BuffChannels() {
 
 	fmt.Println("\n --- conc2BuffChannels ---")
+
 	ch := make(chan string, 2)
 	ch <- "naveen"
 	ch <- "paul"
@@ -40,150 +44,176 @@ func conc2BuffChannels() {
 }
 
 /*
-U gornjem programu, u liniji br. 9 kreiramo baferovani kanal kapaciteta 2. Pošto kanal ima kapacitet 2, moguće je upisati 2 stringa u kanal bez blokiranja. Upisujemo 2 stringa u kanal u linijama br. 10 i 11 i kanal se ne blokira. Čitamo 2 stringa zapisana u linijama br. 12 i 13 respektivno. Ovaj program ispisuje,
+U gornjem programu, kreiramo baferovani kanal tipa string kapaciteta 2. Moguće
+je upisati 2 stringa u kanal bez blokiranja. Upisujemo 2 stringa u kanal, i
+kanal se ne blokira. Čitamo 2 stringa iz kanala. Ovaj program ispisuje,
 
-naveen
-paul
+	>> naveen
+	>> paul
 
-Još jedan primer
+Primer 2
+--------
+Pogledajmo još jedan primer baferovanog kanala u kome se vrednosti ka kanalu
+zapisuju u konkurentnoj gorutini i čitaju iz glavne gorutine. Ovaj primer će
+nam pomoći da bolje razumemo kada se piše u baferovani blok kanala.
+*/
 
-Pogledajmo još jedan primer baferovanog kanala u kome se vrednosti ka kanalu zapisuju u istovremenu Gorutinu i čitaju iz glavne Gorutine. Ovaj primer će nam pomoći da bolje razumemo kada se piše u baferovani blok kanala.
+func write(ch chan int) {
+	for i := 0; i < 5; i++ {
+		ch <- i
+		fmt.Println("successfully wrote", i, "to ch")
+	}
+	close(ch)
+}
 
- 1package main
- 2
- 3import (
- 4    "fmt"
- 5    "time"
- 6)
- 7
- 8func write(ch chan int) {
- 9    for i := 0; i < 5; i++ {
-10        ch <- i
-11        fmt.Println("successfully wrote", i, "to ch")
-12    }
-13    close(ch)
-14}
-15func main() {
-16    ch := make(chan int, 2)
-17    go write(ch)
-18    time.Sleep(2 * time.Second)
-19    for v := range ch {
-20        fmt.Println("read value", v,"from ch")
-21        time.Sleep(2 * time.Second)
-22
-23    }
-24}
+func conc2BuffChannels2() {
 
-Izvedite program na igralištu
+	fmt.Println("\n --- conc2BuffChannels2 ---")
 
-U gornjem programu, baferovani kanal chkapaciteta 2je kreiran u liniji br. 16 Gorutine maini prosleđen writeGorutini u liniji br. 17. Zatim glavna Gorutina prelazi u režim spavanja 2 sekunde. Tokom ovog vremena, writeGorutina se izvršava istovremeno. writeGorutina ima forpetlju koja upisuje brojeve od 0 do 4 u chkanal. Kapacitet ovog baferovanog kanala je 2i stoga će pisanje Goroutinemoći da upisuje vrednosti 0i 1u chkanal odmah, a zatim se blokira dok se barem jedna vrednost ne pročita iz chkanala. Dakle, ovaj program će odmah ispisati sledeća 2 reda.
+	ch := make(chan int, 2)
+	go write(ch)
+	time.Sleep(2 * time.Second)
+	for v := range ch {
+		fmt.Println("read value", v, "from ch")
+		time.Sleep(2 * time.Second)
+	}
+}
 
-successfully wrote 0 to ch
-successfully wrote 1 to ch
+/*
+U gornjem programu, baferovani kanal "ch" kapaciteta 2 je kreiran u glavnoj
+gorutini i prosleđen je "write" gorutini. Zatim glavna gorutina prelazi u režim
+spavanja 2 sekunde. Tokom ovog vremena, "write" gorutina se izvršava konkurentno.
+"write" gorutina ima for petlju koja piše brojeve od 0 do 4 u "ch" kanal.
+Kapacitet ovog baferovanog kanala je 2 i stoga će "write" goroutina moći da
+upiše vrednosti 0 i 1 u "ch" kanal odmah, a zatim se blokira dok se barem jedna
+vrednost ne pročita iz "ch" kanala. Dakle, ovaj program će odmah ispisati sledeća
+2 reda:
 
-Nakon štampanja gornja dva reda, pisanje u chkanal u writeGorutini je blokirano dok neko ne pročita sa chkanala. Pošto glavna Gorutina miruje 2 sekunde pre nego što počne da čita sa kanala, program neće ništa ispisati naredne 2 sekunde. mainGorutina se budi nakon 2 sekunde i počinje da čita sa chkanala koristeći for rangepetlju u redu br. 19, štampa pročitanu vrednost, a zatim ponovo miruje 2 sekunde i ovaj ciklus se nastavlja dok chse ne zatvori. Dakle, program će ispisati sledeće redove nakon 2 sekunde,
+	>> successfully wrote 0 to ch
+	>> successfully wrote 1 to ch
 
-read value 0 from ch
-successfully wrote 2 to ch
+Nakon štampanja gornja dva reda, pisanje u "ch" kanal u "write" gorutini je
+blokirano dok neko ne pročita sa "ch" kanala. Pošto glavna gorutina miruje 2
+sekunde pre nego što počne da čita sa kanala, program neće ništa ispisati
+naredne 2 sekunde. Glavna gorutina se budi nakon 2 sekunde i počinje da čita sa
+"ch" kanala koristeći "for range" petlju, štampa pročitanu vrednost, a zatim
+ponovo miruje 2 sekunde i ovaj ciklus se nastavlja dok se "ch" se ne zatvori.
+Dakle, program će ispisati sledeće redove nakon 2 sekunde,
 
-Ovo će se nastaviti dok se sve vrednosti ne upišu u kanal i on se ne zatvori u writeGorutini. Konačni izlaz bi bio:
+	>> read value 0 from ch
+	>> successfully wrote 2 to ch
 
-successfully wrote 0 to ch
-successfully wrote 1 to ch
-read value 0 from ch
-successfully wrote 2 to ch
-read value 1 from ch
-successfully wrote 3 to ch
-read value 2 from ch
-successfully wrote 4 to ch
-read value 3 from ch
-read value 4 from ch
+Ovo će se nastaviti dok se sve vrednosti ne upišu u kanal i on se ne zatvori u
+"write" gorutini. Konačni izlaz bi bio:
+
+	>> successfully wrote 0 to ch
+	>> successfully wrote 1 to ch
+	>> read value 0 from ch
+	>> successfully wrote 2 to ch
+	>> read value 1 from ch
+	>> successfully wrote 3 to ch
+	>> read value 2 from ch
+	>> successfully wrote 4 to ch
+	>> read value 3 from ch
+	>> read value 4 from ch
 
 Zastoj
+------
+*/
+/*
+func conc2BuffChannelPanic() {
 
- 1package main
- 2
- 3import (
- 4	"fmt"
- 5)
- 6
- 7func main() {
- 8	ch := make(chan string, 2)
- 9	ch <- "naveen"
-10	ch <- "paul"
-11	ch <- "steve"
-12	fmt.Println(<-ch)
-13	fmt.Println(<-ch)
-14}
+	fmt.Println("\n --- conc2BuffChannelPanic  ---")
+	ch := make(chan string, 2)
+	ch <- "naveen"
+	ch <- "paul"
+	ch <- "steve" // This is panic. All gorutines are asleep - deadlock!
 
-Izvedite program na igralištu
+	go fmt.Println(<-ch)
+	go fmt.Println(<-ch)
+}
+*/
+/*
+U gornjem programu, upisujemo 3 stringa u baferovani kanal kapaciteta 2. Kada
+kontrola dođe do trećeg pisanja u liniji br. 11, pisanje je blokirano jer je
+kanal dostigao svoj svoj kapacitet. Sada neka gorutina mora da čita iz kanala
+da bi pisanje moglo da se nastavi, ali u ovom slučaju nema konkurentnog čitanja
+iz ovog kanala. Stoga će doći do zastoja i program će paničiti tokom izvršavanja
+sa sledećom porukom:
 
-U gornjem programu, upisujemo 3 niza u baferovani kanal kapaciteta 2. Kada kontrola dođe do trećeg pisanja u liniji br. 11, pisanje je blokirano jer je kanal premašio svoj kapacitet. Sada neka Gorutina mora da čita iz kanala da bi pisanje moglo da se nastavi, ali u ovom slučaju nema istovremenog čitanja rutine iz ovog kanala. Stoga će doći do zastoja i program će paničiti tokom izvršavanja sa sledećom porukom,
-
-fatal error: all goroutines are asleep - deadlock!
-
-goroutine 1 [chan send]:
-main.main()
-	/tmp/sandbox091448810/prog.go:11 +0x8d
+	>> fatal error: all goroutines are asleep - deadlock!
+	>>
+	>> goroutine 1 [chan send]:
+	>> main.main()
+	>> 	/tmp/sandbox091448810/prog.go:11 +0x8d
 
 Zatvaranje baferovanih kanala
+-----------------------------
 
-Već smo razgovarali o zatvaranju kanala u prethodnom tutorijalu . Pored onoga što smo naučili u prethodnom tutorijalu, postoji još jedna suptilnost koju treba uzeti u obzir prilikom zatvaranja baferovanih kanala.
+Već smo razgovarali o zatvaranju kanala u prethodnom tutorijalu. Pored onoga
+što smo naučili u prethodnom tutorijalu, postoji još jedna suptilnost koju
+treba uzeti u obzir prilikom zatvaranja baferovanih kanala.
 
-Moguće je čitati podatke iz već zatvorenog baferovanog kanala. Kanal će vratiti podatke koji su već upisani u kanal i kada se svi podaci pročitaju, vratiće nultu vrednost kanala.
+Moguće je čitati podatke iz već zatvorenog baferovanog kanala. Kanal će vratiti
+podatke koji su već upisani u kanal i kada se svi podaci pročitaju, vratiće
+nultu vrednost kanala.
+*/
 
-Hajde da napišemo program da bismo ovo razumeli.
+func conc2BuffChannelClosed() {
 
- 1package main
- 2
- 3import (
- 4	"fmt"
- 5)
- 6
- 7func main() {
- 8	ch := make(chan int, 5)
- 9	ch <- 5
-10	ch <- 6
-11	close(ch)
-12	n, open := <-ch
-13	fmt.Printf("Received: %d, open: %t\n", n, open)
-14	n, open = <-ch
-15	fmt.Printf("Received: %d, open: %t\n", n, open)
-16	n, open = <-ch
-17	fmt.Printf("Received: %d, open: %t\n", n, open)
-18}
+	fmt.Println("\n --- conc2BuffChannelClosed ---")
 
-Izvedite program na igralištu
+	ch := make(chan int, 5)
+	ch <- 5
+	ch <- 6
 
-U gornjem programu, kreirali smo baferovani kanal kapaciteta 5u liniji br. 8. Zatim upisujemo 5i 6u kanal. Kanal se nakon toga zatvara u liniji br. 11. Čak i ako je kanal zatvoren, možemo čitati vrednosti koje su već zapisane u kanal. To se radi u linijama br. 12 i 14. Vrednost nwill be 5i open biće trueu liniji br. 12. Vrednost nwill be 6i open će trueponovo biti u liniji br. 14. Sada smo završili sa čitanjem 5i 6iz kanala i nema više podataka za čitanje. Sada kada se kanal ponovo čita u liniji br. 16, vrednost nwill be 0, što je nulta vrednost inti , openbiće , što falseukazuje da je kanal zatvoren.
+	close(ch)
 
-Ovaj program će štampati
+	n, open := <-ch
+	fmt.Printf("Received: %d, open: %t\n", n, open)
 
-Received: 5, open: true
-Received: 6, open: true
-Received: 0, open: false
+	n, open = <-ch
+	fmt.Printf("Received: %d, open: %t\n", n, open)
 
-Isti program se može napisati i korišćenjem petlje for range.
+	n, open = <-ch
+	fmt.Printf("Received: %d, open: %t\n", n, open)
+}
 
- 1package main
- 2
- 3import (
- 4	"fmt"
- 5)
- 6
- 7func main() {
- 8	ch := make(chan int, 5)
- 9	ch <- 5
-10	ch <- 6
-11	close(ch)
-12	for n := range ch {
-13		fmt.Println("Received:", n)
-14	}
-15}
+/*
+U gornjem programu, kreirali smo baferovani kanal kapaciteta 5. Zatim upisujemo
+5 i 6 u kanal. Kanal se nakon toga zatvara. Čak i ako je kanal zatvoren, možemo
+čitati vrednosti koje su već zapisane u kanal. Vrednost n će biti 5 i open biće
+true posle prvog čitanja sa kanala. Vrednost n će biti 6 i open će true posle
+drugog čitanja sa kanala. Posle trećeg čita nja n će biti 0, što je nulta
+vrednost za tip kanala int i open će biti false što ukazuje da je kanal zatvoren.
 
-Izvedite program na igralištu
+Ovaj program će štampati:
 
-Petlja for rangeu liniji br. 12 gornjeg programa će pročitati sve vrednosti zapisane u kanal i završiće se kada više nema vrednosti za čitanje, jer je kanal već zatvoren.
+	>> Received: 5, open: true
+	>> Received: 6, open: true
+	>> Received: 0, open: false
+
+Isti program se može napisati i korišćenjem petlje for range petlje:
+*/
+
+func conc2BuffChannelClosedForRange() {
+
+	fmt.Println("\n --- conc2BuffChannelClosedForrange ---")
+
+	ch := make(chan int, 5)
+	ch <- 5
+	ch <- 6
+
+	close(ch)
+
+	for n := range ch {
+		fmt.Println("Received:", n)
+	}
+}
+
+/*
+Petlja for range gornjeg programa će pročitati sve vrednosti zapisane u kanal i
+završiće se kada više nema vrednosti za čitanje, jer je kanal već zatvoren.
 
 Ovaj program će štampati,
 
@@ -191,75 +221,85 @@ Received: 5
 Received: 6
 
 Dužina naspram kapaciteta
+-------------------------
+Kapacitet baferovanog kanala je broj vrednosti koje kanal može da sadrži. To je
+vrednost koju navodimo prilikom kreiranja baferovanog kanala pomoću make
+funkcije.
 
-Kapacitet baferovanog kanala je broj vrednosti koje kanal može da sadrži. To je vrednost koju navodimo prilikom kreiranja baferovanog kanala pomoću makefunkcije .
+Dužina baferovanog kanala je broj elemenata koji se trenutno nalaze u njemu u
+redu čekanja.
 
-Dužina baferovanog kanala je broj elemenata koji se trenutno nalaze u njemu u redu čekanja.
+Program će razjasniti stvari:
+*/
 
-Program će razjasniti stvari 😀
+func conc2BuffCapVsLen() {
 
- 1package main
- 2
- 3import (
- 4	"fmt"
- 5)
- 6
- 7func main() {
- 8	ch := make(chan string, 3)
- 9	ch <- "naveen"
-10	ch <- "paul"
-11	fmt.Println("capacity is", cap(ch))
-12	fmt.Println("length is", len(ch))
-13	fmt.Println("read value", <-ch)
-14	fmt.Println("new length is", len(ch))
-15}
+	fmt.Println("\n --- conc2BuffCapVsLen ---")
 
-Izvedite program na igralištu
+	ch := make(chan string, 3)
+	ch <- "naveen"
+	ch <- "paul"
 
-U gornjem programu, kanal je kreiran sa kapacitetom od 3, odnosno može da sadrži 3 stringa. Zatim upisujemo 2 stringa u kanal u redovima br. 9 i 10, respektivno. Sada kanal ima 2 stringa u redu čekanja i stoga je njegova dužina 2. U redu br. 13, čitamo string iz kanala. Sada kanal ima samo jedan string u redu čekanja i stoga njegova dužina postaje 1. Ovaj program će ispisati,
+	fmt.Println("capacity is", cap(ch))
+	fmt.Println("length is", len(ch))
+	fmt.Println("read value", <-ch)
+	fmt.Println("new length is", len(ch))
+}
 
-capacity is 3
-length is 2
-read value naveen
-new length is 1
+/*
+U gornjem programu, kanal je kreiran sa kapacitetom od 3, odnosno može da
+sadrži 3 stringa. Zatim upisujemo 2 stringa u kanal. Sada kanal ima 2 stringa
+u redu čekanja i stoga je njegova dužina 2. Potom čitamo string iz kanala. Sada
+kanal ima samo jedan string u redu čekanja i stoga njegova dužina postaje 1.
+Ovaj program će ispisati:
 
-Grupa čekanja
+	>> capacity is 3
+	>> length is 2
+	>> read value naveen
+	>> new length is 1
 
-Sledeći odeljak u ovom tutorijalu je o radničkim bazenima . Da bismo razumeli radničke bazene, prvo moramo znati WaitGroupkako će se koristiti u implementaciji radničke baze.
+WaitGroup
+=========
 
-Grupa čekanja (WaitGroup) se koristi za čekanje da se završi izvršavanje kolekcije gorutina (Goroutine). Kontrola je blokirana dok se sve gorutine ne završe sa izvršavanjem. Recimo da imamo 3 gorutine koje se istovremeno izvršavaju, a koje su nastale iz maingorutine. mainGorutine moraju da sačekaju da se završe ostale 3 gorutine pre nego što se završe. To se može postići korišćenjem grupe čekanja (WaitGroup).
+Sledeći odeljak u ovom tutorijalu je o worker pool-ovima. Da bismo razumeli
+worker pool-ove, prvo moramo znati WaitGroup kako se koristiti u implementaciji
+worker osnove.
 
-Hajde da prestanemo sa teorijom i odmah napišemo neki kod 😀
+Grupa čekanja (WaitGroup) se koristi za čekanje da se završi izvršavanje
+kolekcije gorutina. Kontrola je blokirana dok sve gorutine ne završe sa
+izvršavanjem. Recimo da imamo 3 gorutine koje se istovremeno izvršavaju, a koje
+su nastale iz glavne gorutine. Glavna gorutina mora da sačeka da se završe
+ostale 3 gorutine pre nego što se ona završi. To se može postići korišćenjem
+grupe čekanja (WaitGroup).
 
- 1package main
- 2
- 3import (
- 4	"fmt"
- 5	"sync"
- 6	"time"
- 7)
- 8
- 9func process(i int, wg *sync.WaitGroup) {
-10	fmt.Println("started Goroutine ", i)
-11	time.Sleep(2 * time.Second)
-12	fmt.Printf("Goroutine %d ended\n", i)
-13	wg.Done()
-14}
-15
-16func main() {
-17	no := 3
-18	var wg sync.WaitGroup
-19	for i := 0; i < no; i++ {
-20		wg.Add(1)
-21		go process(i, &wg)
-22	}
-23	wg.Wait()
-24	fmt.Println("All go routines finished executing")
-25}
+Hajde da prestanemo sa teorijom i odmah napišemo neki kod:
+*/
 
-Trčanje na igralištu
+func process(i int, wg *sync.WaitGroup) {
+	fmt.Println("started Goroutine ", i)
+	time.Sleep(2 * time.Second)
+	fmt.Printf("Goroutine %d ended\n", i)
+	wg.Done()
+}
 
-WaitGroup je tipa struktura i kreiramo promenljivu nulte vrednosti tog tipa WaitGroupu liniji br. 18. Način WaitGrouprada je korišćenjem brojača. Kada pozovemo Addi WaitGroupprosledimo mu int, WaitGroupbrojač se povećava za vrednost prosleđenu na Add. Način za smanjenje brojača je pozivanjem Done()metode na WaitGroup. Wait()Metoda blokira Goroutineu kojoj se poziva dok brojač ne postane nula.
+func main() {
+	no := 3
+	var wg sync.WaitGroup
+	for i := 0; i < no; i++ {
+		wg.Add(1)
+		go process(i, &wg)
+	}
+	wg.Wait()
+	fmt.Println("All go routines finished executing")
+}
+
+/*
+WaitGroup je tipa struktura i kreiramo promenljivu nulte vrednosti tog tipa
+WaitGroupu liniji br. 18. Način WaitGrouprada je korišćenjem brojača. Kada
+pozovemo Add i WaitGroup prosledimo mu int, WaitGroup brojač se povećava za
+vrednost prosleđenu na Add. Način za smanjenje brojača je pozivanjem Done()
+metode na WaitGroup. Wait()Metoda blokira Goroutineu kojoj se poziva dok brojač
+ne postane nula.
 
 U gornjem programu, pozivamo wg.Add(1)u liniji br. 20 unutar forpetlje koja se ponavlja 3 puta. Tako brojač sada postaje 3. forPetlja takođe stvara 3 processGorutine, a zatim wg.Wait()poziv u liniji br. 23 tera mainGorutinu da čeka dok brojač ne postane nula. Brojač se smanjuje pozivom wg.Doneu processGorutini u liniji br. 13. Kada sve 3 generisane Gorutine završe svoje izvršavanje, odnosno kada wg.Done()budu pozvane tri puta, brojač će postati nula, a glavna Gorutina će biti deblokirana.
 
@@ -506,4 +546,9 @@ func Conc2Func() {
 	fmt.Println("\n --- Conc2 Func ---")
 
 	conc2BuffChannels()
+	conc2BuffChannels2()
+	// conc2BuffChannelPanic()
+	conc2BuffChannelClosed()
+	conc2BuffChannelClosedForRange()
+	conc2BuffCapVsLen()
 }
