@@ -20,7 +20,8 @@ import (
 	// methods "learngo/17-methods"
 	// ifaces "learngo/18-interfaces"
 	// conc "learngo/19-conc"
-	conc2 "learngo/20-conc2"
+	// conc2 "learngo/20-conc2"
+	sel "learngo/21-select"
 )
 
 func main() {
@@ -44,5 +45,7 @@ func main() {
 	// methods.MethodFuncs()
 	// ifaces.InterfaceFuncs()
 	// conc.ConcFunc()
-	conc2.Conc2Func()
+	// conc2.Conc2Func()
+	sel.SelectFunc()
+
 }
