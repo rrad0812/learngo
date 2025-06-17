@@ -21,11 +21,11 @@ import (
 	// ifaces "learngo/18-interfaces"
 	// conc "learngo/19-conc"
 	// conc2 "learngo/20-conc2"
-	sel "learngo/21-select"
+	// sel "learngo/21-select"
+	mut "learngo/22-mutex"
 )
 
 func main() {
-
 	// iandi.IAndI()
 	// helloworld.HelloWorld()
 	// variables.Variables()
@@ -46,6 +46,6 @@ func main() {
 	// ifaces.InterfaceFuncs()
 	// conc.ConcFunc()
 	// conc2.Conc2Func()
-	sel.SelectFunc()
-
+	//sel.SelectFunc()
+	mut.MutFunc()
 }

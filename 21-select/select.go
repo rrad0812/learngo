@@ -44,8 +44,8 @@ func selExample() {
 
 /*
 U gornjem programu, server1 funkcija je u stanju mirovanja 6 sekundi, a zatim
-upisuje tekst "from server1" na kanal ch. server2 funkcija je u stanju mirovanja
-3 sekunde, a zatim upisuje sa servera2 na kanal ch.
+upisuje tekst "from server1" na kanal ch. server2 funkcija je u stanju
+mirovanja 3 sekunde, a zatim upisuje sa servera2 na kanal ch.
 
 Glavna funkcija poziva goroutines server1 i server2.
 
@@ -65,19 +65,20 @@ Razlog za imenovanje funkcija u gornjem programu kao server1i server2 jeste
 ilustracija praktične upotrebe funkcije select.
 
 Pretpostavimo da imamo aplikaciju kritične važnosti i da nam je potrebno da što
-pre vratimo rezultat korisniku. Baza podataka za ovu aplikaciju je replicirana i
-sačuvana na različitim serverima širom sveta. Pretpostavimo da funkcije server1
-i server2 zapravo komuniciraju sa 2 takva servera. Vreme odziva svakog servera
-zavisi od opterećenja na svakom od njih i kašnjenja mreže. Šaljemo zahtev na
-oba servera, a zatim čekamo odgovor na odgovarajućim kanalima koristeći naredbu
-select. Server koji prvi odgovori bira se selectom, a drugi odgovor se ignoriše.
-Na ovaj način možemo poslati isti zahtev na više servera i vratiti najbrži
-odgovor korisniku :).
+pre vratimo rezultat korisniku. Baza podataka za ovu aplikaciju je replicirana
+i sačuvana na različitim serverima širom sveta. Pretpostavimo da funkcije
+server1 i server2 zapravo komuniciraju sa 2 takva servera. Vreme odziva svakog
+servera zavisi od opterećenja na svakom od njih i kašnjenja mreže. Šaljemo
+zahtev na oba servera, a zatim čekamo odgovor na odgovarajućim kanalima
+koristeći naredbu select. Server koji prvi odgovori bira se selectom, a drugi
+odgovor se ignoriše. Na ovaj način možemo poslati isti zahtev na više servera i
+vratiti najbrži odgovor korisniku :).
 
 Podrazumevani slučaj
 --------------------
-Podrazumevani slučaj u select naredbi se izvršava kada nijedan drugi slučaj nije
-spreman. Ovo se generalno koristi da bi se sprečilo blokiranje naredbe SELECT.
+Podrazumevani slučaj u select naredbi se izvršava kada nijedan drugi slučaj
+nije spreman. Ovo se generalno koristi da bi se sprečilo blokiranje naredbe
+SELECT.
 */
 
 func process(ch chan string) {
@@ -202,14 +203,15 @@ func selDeadlockWithDefaultAndNil() {
 /*
 U gornjem programu ch je nil i pokušavamo da čitamo iz ch u selektu. Da default
 slučaj nije bio prisutan, select bi se blokirao zauvek i izazvao bi zastoj.
-Pošto imamo podrazumevani slučaj unutar selekta, on će biti izvršen i program će
-ispisati,
+Pošto imamo podrazumevani slučaj unutar selekta, on će biti izvršen i program
+će ispisati,
 
 	>> default case executed
 
 Slučajni izbor
 --------------
-Kada je više slučajeva u select izjavi spremno, jedan od njih će biti izvršen nasumično.
+Kada je više slučajeva u select izjavi spremno, jedan od njih će biti izvršen
+nasumično.
 */
 
 func server11(ch chan string) {
