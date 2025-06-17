@@ -28,6 +28,7 @@ package conc2
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -262,8 +263,8 @@ WaitGroup
 =========
 
 Sledeći odeljak u ovom tutorijalu je o worker pool-ovima. Da bismo razumeli
-worker pool-ove, prvo moramo znati WaitGroup kako se koristiti u implementaciji
-worker osnove.
+worker pool-ove, prvo moramo znati WaitGroup i kako ih koristiti u implementaciji
+worker poola.
 
 Grupa čekanja (WaitGroup) se koristi za čekanje da se završi izvršavanje
 kolekcije gorutina. Kontrola je blokirana dok sve gorutine ne završe sa
@@ -276,13 +277,15 @@ Hajde da prestanemo sa teorijom i odmah napišemo neki kod:
 */
 
 func process(i int, wg *sync.WaitGroup) {
-	fmt.Println("started Goroutine ", i)
+	fmt.Println("started goroutine ", i)
 	time.Sleep(2 * time.Second)
-	fmt.Printf("Goroutine %d ended\n", i)
+	fmt.Printf("goroutine %d ended\n", i)
 	wg.Done()
 }
 
-func main() {
+func conc2WaitGroup() {
+
+	fmt.Println("\n --- conc2WaitGroup ---")
 	no := 3
 	var wg sync.WaitGroup
 	for i := 0; i < no; i++ {
@@ -294,236 +297,273 @@ func main() {
 }
 
 /*
-WaitGroup je tipa struktura i kreiramo promenljivu nulte vrednosti tog tipa
-WaitGroupu liniji br. 18. Način WaitGrouprada je korišćenjem brojača. Kada
-pozovemo Add i WaitGroup prosledimo mu int, WaitGroup brojač se povećava za
-vrednost prosleđenu na Add. Način za smanjenje brojača je pozivanjem Done()
-metode na WaitGroup. Wait()Metoda blokira Goroutineu kojoj se poziva dok brojač
+WaitGroup je tipa strukture. Kreiramo promenljivu nulte vrednosti tipa
+WaitGroupe. Način WaitGroupra je korišćenjem brojača. Kada pozovemo Add i
+WaitGroupI prosledimo int, WaitGroup brojač se povećava za vrednost
+prosleđenu na Add. Način za smanjenje brojača je pozivanjem Done() metode na
+WaitGroup. Wait() metoda blokira goroutinu U kojoj se poziva, dok brojač
 ne postane nula.
 
-U gornjem programu, pozivamo wg.Add(1)u liniji br. 20 unutar forpetlje koja se ponavlja 3 puta. Tako brojač sada postaje 3. forPetlja takođe stvara 3 processGorutine, a zatim wg.Wait()poziv u liniji br. 23 tera mainGorutinu da čeka dok brojač ne postane nula. Brojač se smanjuje pozivom wg.Doneu processGorutini u liniji br. 13. Kada sve 3 generisane Gorutine završe svoje izvršavanje, odnosno kada wg.Done()budu pozvane tri puta, brojač će postati nula, a glavna Gorutina će biti deblokirana.
+U gornjem programu, pozivamo wg.Add(1) unutar for petlje koja se ponavlja 3
+puta. Tako brojač sada postaje 3. for petlja takođe stvara 3 process gorutine,
+a zatim wg.Wait() poziv tera glavnu gorutinu da čeka dok brojač ne postane nula.
+Brojač se smanjuje pozivom wg.Done u process gorutini. Kada sve 3 generisane
+gorutine završe svoje izvršavanje, odnosno kada wg.Done() bude pozvana tri puta,
+brojač će postati nula, a glavna gorutina će biti deblokirana.
 
-Važno je proslediti pokazivač wgu liniji br. 21. Ako pokazivač nije prosleden, onda će svaka Gorutina imati svoju kopiju WaitGroupi mainneće biti obaveštena kada završi sa izvršavanjem.
+Važno je proslediti pokazivač wg u gorutinu koja se pkreće. Ako pokazivač nije
+prosleden, onda će svaka gorutina imati svoju kopiju WaitGroup i glavna gorutina
+neće biti obaveštena  kada završi sa izvršavanjem.
 
-Ovaj program izvodi.
+Ovaj program ispisuje:
 
-started Goroutine  2
-started Goroutine  0
-started Goroutine  1
-Goroutine 0 ended
-Goroutine 2 ended
-Goroutine 1 ended
-All go routines finished executing
+	>> started goroutine  2
+	>> started goroutine  0
+	>> started goroutine  1
+	>> goroutine 0 ended
+	>> goroutine 2 ended
+	>> goroutine 1 ended
+	>> All go routines finished executing
 
-Vaš izlaz može biti drugačiji od mog jer redosled izvršavanja Gorutina može da varira :).
-Implementacija baze radnika
+Vaš izlaz može biti drugačiji od mog jer redosled izvršavanja Gorutina može da
+varira :).
 
-Jedna od važnih upotreba baferovanog kanala je implementacija baze radnika .
+Implementacija worker poola
+---------------------------
+Jedna od važnih upotreba baferovanog kanala je implementacija worker poola.
+Generalno, worker pool je skup niti koje čekaju da im se dodele zadaci. Kada
+završe dodeljeni zadatak, ponovo se stavljaju na raspolaganje za sledeći
+zadatak.
 
-Generalno, radnički pul je skup niti koje čekaju da im se dodele zadaci. Kada završe dodeljeni zadatak, ponovo se stavljaju na raspolaganje za sledeći zadatak.
+Implementiraćemo worker pool koristeći baferovane kanale. Naš worker pool će
+izvršiti zadatak pronalaženja zbira cifara ulaznog broja. Na primer, ako se
+prosledi 234, izlaz bi bio 9 (2 + 3 + 4). Ulaz u worker pool biće lista
+pseudo-slučajnih celih brojeva.
 
-Implementiraćemo pul radnika koristeći baferovane kanale. Naš pul radnika će izvršiti zadatak pronalaženja zbira cifara ulaznog broja. Na primer, ako se prosledi 234, izlaz bi bio 9 (2 + 3 + 4). Ulaz u pul radnika biće lista pseudo-slučajnih celih brojeva.
+Sledeće su osnovne funkcionalnosti našeg worker pool-a:
 
-Sledeće su osnovne funkcionalnosti našeg fonda radnika
-
-    Kreiranje baze Gorutina koje slušaju na ulaznom baferovanom kanalu čekajući da se zadaci dodele
-    Dodavanje poslova u ulazni baferovani kanal
-    Upisivanje rezultata u izlazni baferovani kanal nakon završetka posla
-    Čitanje i štampanje rezultata iz izlaznog baferovanog kanala
+- Kreiranje poola gorutina koje slušaju na ulaznom baferovanom kanalu čekajući
+  da se zadaci dodele
+- Dodavanje poslova u ulazni baferovani kanal
+- Upisivanje rezultata u izlazni baferovani kanal nakon završetka posla
+- Čitanje i štampanje rezultata iz izlaznog baferovanog kanala
 
 Ovaj program ćemo pisati korak po korak kako bi bio lakši za razumevanje.
 
 Prvi korak će biti kreiranje struktura koje predstavljaju posao i rezultat.
 
-1type Job struct {
-2	id       int
-3	randomno int
-4}
-5type Result struct {
-6	job         Job
-7	sumofdigits int
-8}
+type Job struct {
+	id       int
+	randomno int
+}
+type Result struct {
+	job         Job
+	sumofdigits int
+}
 
-Svaka Jobstruktura ima a idi a randomnoza koje se mora izračunati zbir pojedinačnih cifara.
-
-Struktura Resultima jobpolje koje predstavlja zadatak za koji se u polju čuva rezultat (zbir pojedinačnih cifara) sumofdigits.
+Svaka "Job" struktura ima a "randomno" za koje se mora izračunati zbir
+pojedinačnih cifara. Struktura "Result" ima "job" polje koje predstavlja zadatak
+za koji se u polju "sumofdigits" čuva rezultat (zbir pojedinačnih cifara).
 
 Sledeći korak je kreiranje baferovanih kanala za prijem poslova i pisanje izlaza.
 
-1var jobs = make(chan Job, 10)
-2var results = make(chan Result, 10)
+var jobs = make(chan Job, 10)
+var results = make(chan Result, 10)
 
-Radničke gorutine osluškuju nove zadatke na jobsbaferovanom kanalu. Kada se zadatak završi, rezultat se upisuje u resultsbaferovani kanal.
+Worker gorutine osluškuju nove zadatke na jobs baferovanom kanalu. Kada se
+zadatak završi, rezultat se upisuje u results baferovani kanal.
 
-Funkcija digitsispod obavlja stvarni posao pronalaženja zbira pojedinačnih cifara celog broja i vraćanja tog rezultata. Dodaćemo period spavanja od 2 sekunde ovoj funkciji samo da bismo simulirali činjenicu da je potrebno neko vreme da ova funkcija izračuna rezultat.
+Funkcija "digits" ispod obavlja stvarni posao pronalaženja zbira pojedinačnih
+cifara celog broja i vraćanja tog rezultata. Dodaćemo period spavanja od 2
+sekunde ovoj funkciji samo da bismo simulirali činjenicu da je potrebno neko
+vreme da ova funkcija izračuna rezultat.
 
- 1func digits(number int) int {
- 2	sum := 0
- 3	no := number
- 4	for no != 0 {
- 5		digit := no % 10
- 6		sum += digit
- 7		no /= 10
- 8	}
- 9	time.Sleep(2 * time.Second)
-10	return sum
-11}
+func digits(number int) int {
+	sum := 0
+	no := number
+	for no != 0 {
+		digit := no % 10
+		sum += digit
+		no /= 10
+	}
+	time.Sleep(2 * time.Second)
+	return sum
+}
 
-Zatim, napisaćemo funkciju koja kreira radničku Gorutinu.
+Zatim, napisaćemo funkciju koja kreira worker gorutinu.
 
-1func worker(wg *sync.WaitGroup) {
-2	for job := range jobs {
-3		output := Result{job, digits(job.randomno)}
-4		results <- output
-5	}
-6	wg.Done()
-7}
+func worker(wg *sync.WaitGroup) {
+	for job := range jobs {
+		output := Result{job, digits(job.randomno)}
+		results <- output
+	}
+	wg.Done()
+}
 
-Gore navedena funkcija kreira radnik koji čita iz jobskanala, kreira Resultstrukturu koristeći trenutnu jobi povratnu vrednost funkcije digits, a zatim upisuje rezultat u resultsbaferovani kanal. Ova funkcija uzima WaitGroup wgkao parametar na kojem će pozvati Done()metodu kada se sve jobszavrši.
+Gore navedena funkcija kreira "worker" koji čita iz "jobs" kanala, kreira
+"Result" strukturu koristeći trenutnu job i povratnu vrednost funkcije
+"digits", a zatim upisuje rezultat u "results" baferovani kanal.
 
-Funkcija createWorkerPoolće kreirati skup radnih Gorutina.
+Ova funkcija uzima WaitGroup "wg" kao parametar na kojem će pozvati "Done()"
+metodu kada sve "jobs" završi.
 
-1func createWorkerPool(noOfWorkers int) {
-2	var wg sync.WaitGroup
-3	for i := 0; i < noOfWorkers; i++ {
-4		wg.Add(1)
-5		go worker(&wg)
-6	}
-7	wg.Wait()
-8	close(results)
-9}
+Funkcija "createWorkerPool" će kreirati skup radnih gorutina.
 
-Gore navedena funkcija uzima broj radnika koji treba da se kreiraju kao parametar. wg.Add(1)Pre kreiranja Gorutine poziva funkciju da bi se povećao brojač WaitGroup. Zatim kreira radne Gorutine prosleđivanjem pokazivača WaitGroup wgfunkciji worker. Nakon kreiranja potrebnih radnih Gorutina, čeka da sve Gorutine završe svoje izvršavanje pozivanjem funkcije wg.Wait(). Nakon što sve Gorutine završe sa izvršavanjem, zatvara resultskanal jer su sve Gorutine završile svoje izvršavanje i niko drugi više neće pisati u resultskanal.
+func createWorkerPool(noOfWorkers int) {
+	var wg sync.WaitGroup
+	for i := 0; i < noOfWorkers; i++ {
+		wg.Add(1)
+		go worker(&wg)
+	}
+	wg.Wait()
+	close(results)
+}
 
-Sada kada imamo spreman skup radnika, hajde da napišemo funkciju koja će dodeliti poslove radnicima.
+Gore navedena funkcija uzima broj workera koji treba da se kreiraju kao
+parametar. Pre kreiranja gorutine poziva funkciju wg.Add(1) da bi se povećao
+brojač WaitGroup. Zatim kreira worker gorutinu prosleđivanjem pokazivača
+WaitGroup "wg" funkciji worker. Nakon kreiranja potrebnih worker gorutina,
+čeka da sve gorutine završe svoje izvršavanje pozivanjem funkcije wg.Wait().
+Nakon što sve gorutine završe sa izvršavanjem, zatvara results kanal jer su
+sve gorutine završile svoje izvršavanje i niko drugi više neće pisati u results
+kanal.
 
-1func allocate(noOfJobs int) {
-2	for i := 0; i < noOfJobs; i++ {
-3		randomno := rand.Intn(999)
-4		job := Job{i, randomno}
-5		jobs <- job
-6	}
-7	close(jobs)
-8}
+Sada kada imamo spreman skup workera, hajde da napišemo funkciju koja će
+dodeliti poslove radnicima.
 
-Gore navedena funkcija allocateuzima broj poslova koji treba da se kreiraju kao ulazni parametar, generiše pseudo slučajne brojeve sa maksimalnom vrednošću 998, kreira Jobstrukturu koristeći slučajni broj i brojač iz petlje for ikao identifikator, a zatim ih upisuje u jobskanal. Zatvara jobskanal nakon što upiše sve poslove.
+func allocate(noOfJobs int) {
+	for i := 0; i < noOfJobs; i++ {
+		randomno := rand.Intn(999)
+		job := Job{i, randomno}
+		jobs <- job
+	}
+	close(jobs)
+}
 
-Sledeći korak bi bio kreiranje funkcije koja čita resultskanal i štampa izlaz.
+Gore navedena funkcija allocate uzima broj poslova koji treba da se kreiraju
+kao ulazni parametar, generiše pseudo slučajne brojeve sa maksimalnom vrednošću
+998, kreira Jobstrukturu koristeći slučajni broj i brojač iz petlje for i kao
+identifikator, a zatim ih upisuje u jobskanal. Zatvara jobskanal nakon što upiše
+sve poslove.
 
-1func result(done chan bool) {
-2	for result := range results {
-3		fmt.Printf("Job id %d, input random no %d , sum of digits %d\n", result.job.id, result.job.randomno, result.sumofdigits)
-4	}
-5	done <- true
-6}
+Sledeći korak bi bio kreiranje funkcije koja čita results kanal i štampa izlaz.
+
+func result(done chan bool) {
+	for result := range results {
+		fmt.Printf("Job id %d, input random no %d , sum of digits %d\n", result.job.id, result.job.randomno, result.sumofdigits)
+	}
+	done <- true
+}
 
 Funkcija resultčita resultskanal i ispisuje ID posla, uneti slučajni broj i zbir cifara slučajnog broja. Funkcija rezultata takođe uzima donekanal kao parametar u koji upisuje nakon što ispiše sve rezultate.
 
 Sada smo sve podesili. Hajde da završimo poslednji korak pozivanja svih ovih funkcija iz main()funkcije.
 
- 1func main() {
- 2	startTime := time.Now()
- 3	noOfJobs := 100
- 4	go allocate(noOfJobs)
- 5	done := make(chan bool)
- 6	go result(done)
- 7	noOfWorkers := 10
- 8	createWorkerPool(noOfWorkers)
- 9	<-done
-10	endTime := time.Now()
-11	diff := endTime.Sub(startTime)
-12	fmt.Println("total time taken ", diff.Seconds(), "seconds")
-13}
+func main() {
+	startTime := time.Now()
+	noOfJobs := 100
+	go allocate(noOfJobs)
+	done := make(chan bool)
+	go result(done)
+	noOfWorkers := 10
+	createWorkerPool(noOfWorkers)
+	<-done
+	endTime := time.Now()
+	diff := endTime.Sub(startTime)
+	fmt.Println("total time taken ", diff.Seconds(), "seconds")
+}
 
-Prvo čuvamo vreme početka izvršavanja programa u redu br. 2 glavne funkcije, a u poslednjem redu (red br. 12) izračunavamo vremensku razliku između vremena kraja (endTime) i vremena početka (startTime) i prikazujemo ukupno vreme potrebno za izvršavanje programa. Ovo je potrebno jer ćemo vršiti neka testiranja promenom broja Gorutina (Goutines).
+Prvo sačuvamo vreme početka izvršavanja programa, a na kraju izračunavamo
+vremensku razliku između vremena kraja (endTime) i vremena početka
+(startTime) i prikazujemo ukupno vreme potrebno za izvršavanje programa.
+Ovo je potrebno jer ćemo vršiti neka testiranja promenom broja gorutina.
 
-je noOfJobspodešeno na 100, a zatim allocatese poziva da bi se dodali poslovi u jobskanal.
+noOfJobs je podešeno na 100, a zatim se poziva allocate da bi dodali poslove
+u jobs kanal.
 
-Zatim donese kreira kanal i prosleđuje Gorutini resulttako da može da počne sa štampanjem izlaza i obavesti kada je sve odštampano.
+Zatim se kreira done kanal i prosleđuje result gorutini tako da može da počne
+sa štampanjem izlaza i obavesti kada je sve odštampano.
 
-10Konačno , poziv funkcije kreira skup radnih gorutina createWorkerPool, a zatim funkcija main čeka na donekanalu da se svi rezultati odštampaju.
+Konačno postavi se noWorkers na 10 i pozivq funkcijq createWorkerPool da kreira
+skup worker gorutina, a zatim glavna funkcija čeka na done kanalu da se svi
+rezultati odštampaju.
 
 Evo kompletnog programa za vašu referencu. Uvezao sam i potrebne pakete.
+*/
 
- 1package main
- 2
- 3import (
- 4	"fmt"
- 5	"math/rand"
- 6	"sync"
- 7	"time"
- 8)
- 9
-10type Job struct {
-11	id       int
-12	randomno int
-13}
-14type Result struct {
-15	job         Job
-16	sumofdigits int
-17}
-18
-19var jobs = make(chan Job, 10)
-20var results = make(chan Result, 10)
-21
-22func digits(number int) int {
-23	sum := 0
-24	no := number
-25	for no != 0 {
-26		digit := no % 10
-27		sum += digit
-28		no /= 10
-29	}
-30	time.Sleep(2 * time.Second)
-31	return sum
-32}
-33func worker(wg *sync.WaitGroup) {
-34	for job := range jobs {
-35		output := Result{job, digits(job.randomno)}
-36		results <- output
-37	}
-38	wg.Done()
-39}
-40func createWorkerPool(noOfWorkers int) {
-41	var wg sync.WaitGroup
-42	for i := 0; i < noOfWorkers; i++ {
-43		wg.Add(1)
-44		go worker(&wg)
-45	}
-46	wg.Wait()
-47	close(results)
-48}
-49func allocate(noOfJobs int) {
-50	for i := 0; i < noOfJobs; i++ {
-51		randomno := rand.Intn(999)
-52		job := Job{i, randomno}
-53		jobs <- job
-54	}
-55	close(jobs)
-56}
-57func result(done chan bool) {
-58	for result := range results {
-59		fmt.Printf("Job id %d, input random no %d , sum of digits %d\n", result.job.id, result.job.randomno, result.sumofdigits)
-60	}
-61	done <- true
-62}
-63func main() {
-64	startTime := time.Now()
-65	noOfJobs := 100
-66	go allocate(noOfJobs)
-67	done := make(chan bool)
-68	go result(done)
-69	noOfWorkers := 10
-70	createWorkerPool(noOfWorkers)
-71	<-done
-72	endTime := time.Now()
-73	diff := endTime.Sub(startTime)
-74	fmt.Println("total time taken ", diff.Seconds(), "seconds")
-75}
+type Job struct {
+	id       int
+	randomno int
+}
+type Result struct {
+	job         Job
+	sumofdigits int
+}
 
-Trčanje na igralištu
+var jobs = make(chan Job, 10)
+var results = make(chan Result, 10)
 
-Molimo vas da pokrenete ovaj program na vašem lokalnom računaru radi veće tačnosti u izračunavanju ukupnog potrebnog vremena.
+func digits(number int) int {
+	sum := 0
+	no := number
+	for no != 0 {
+		digit := no % 10
+		sum += digit
+		no /= 10
+	}
+	time.Sleep(2 * time.Second)
+	return sum
+}
+func worker(wg *sync.WaitGroup) {
+	for job := range jobs {
+		output := Result{job, digits(job.randomno)}
+		results <- output
+	}
+	wg.Done()
+}
+func createWorkerPool(noOfWorkers int) {
+	var wg sync.WaitGroup
+	for i := 0; i < noOfWorkers; i++ {
+		wg.Add(1)
+		go worker(&wg)
+	}
+	wg.Wait()
+	close(results)
+}
+func allocate(noOfJobs int) {
+	for i := 0; i < noOfJobs; i++ {
+		randomno := rand.Intn(999)
+		job := Job{i, randomno}
+		jobs <- job
+	}
+	close(jobs)
+}
+func result(done chan bool) {
+	for result := range results {
+		fmt.Printf("Job id %d, input random no %d , sum of digits %d\n", result.job.id, result.job.randomno, result.sumofdigits)
+	}
+	done <- true
+}
+func conc2WorkerPool() {
+
+	fmt.Println("\n --- conc2WorkerPool ---")
+
+	startTime := time.Now()
+	noOfJobs := 100
+	go allocate(noOfJobs)
+	done := make(chan bool)
+	go result(done)
+	noOfWorkers := 10
+	createWorkerPool(noOfWorkers)
+	<-done
+	endTime := time.Now()
+	diff := endTime.Sub(startTime)
+	fmt.Println("total time taken ", diff.Seconds(), "seconds")
+}
+
+/*
+Molimo vas da pokrenete ovaj program na vašem lokalnom računaru radi veće
+tačnosti u izračunavanju ukupnog potrebnog vremena.
 
 Ovaj program će štampati,
 
@@ -533,13 +573,20 @@ Job id 9, input random no 150, sum of digits 6
 ...
 total time taken  20.01081009 seconds
 
-Ukupno će biti ispisano 100 redova koji odgovaraju 100 zadataka, a zatim će na kraju u poslednjem redu biti ispisano ukupno vreme potrebno za izvršavanje programa. Vaš izlaz će se razlikovati od mog jer se Gorutine mogu izvršavati bilo kojim redosledom, a ukupno vreme će takođe varirati u zavisnosti od hardvera. U mom slučaju, potrebno je približno 20 sekundi da se program završi.
+Ukupno će biti ispisano 100 redova koji odgovaraju za 100 zadataka, a zatim će
+na kraju u poslednjem redu biti ispisano ukupno vreme potrebno za izvršavanje
+programa. Vaš izlaz će se razlikovati od mog jer se gorutine mogu izvršavati
+bilo kojim redosledom, a ukupno vreme će takođe varirati u zavisnosti od
+hardvera. U mom slučaju, potrebno je približno 20 sekundi da se program završi.
 
-Sada povećajmo noOfWorkersu mainfunkciji na 20. Udvostručili smo broj radnika. Pošto su se radnički Gorutine povećali (udvostručili, da budem precizan), ukupno vreme potrebno za završetak programa trebalo bi da se smanji (za polovinu, da budem precizan). U mom slučaju, to je postalo 10,004364685 sekundi i program je ispisao,
+Sada povećajmo noOfWorkersu main funkciji na 20. Udvostručili smo broj radnika.
+Pošto su se radnički Gorutine povećali (udvostručili, da budem precizan), ukupno
+vreme potrebno za završetak programa trebalo bi da se smanji (za polovinu,
+da budem precizan). U mom slučaju, to je postalo 10,004364685 sekundi i program
+je ispisao:
 
 ...
 total time taken  10.004364685 seconds
-
 */
 
 func Conc2Func() {
@@ -551,4 +598,6 @@ func Conc2Func() {
 	conc2BuffChannelClosed()
 	conc2BuffChannelClosedForRange()
 	conc2BuffCapVsLen()
+	conc2WaitGroup()
+	conc2WorkerPool()
 }
