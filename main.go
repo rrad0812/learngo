@@ -10,7 +10,8 @@ import (
 	// psm "learngo/07-pointersStructsMethods"
 	// ifaces "learngo/08-ifaces"
 	// conc "learngo/09-conc"
-	oop "learngo/10-oop"
+	// oop "learngo/10-oop"
+	de "learngo/11-deferAndError"
 )
 
 func main() {
@@ -36,5 +37,7 @@ func main() {
 	// conc.Conc2Func()
 	// conc.SelectFunc()
 	// conc.MutFunc()
-	oop.OOPFunc()
+	// oop.OOPFunc()
+	// de.DeferFunc()
+	de.ErrorFunc()
 }
