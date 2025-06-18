@@ -22,7 +22,8 @@ import (
 	// conc "learngo/19-conc"
 	// conc2 "learngo/20-conc2"
 	// sel "learngo/21-select"
-	mut "learngo/22-mutex"
+	// mut "learngo/22-mutex"
+	oop "learngo/23-oop"
 )
 
 func main() {
@@ -47,5 +48,6 @@ func main() {
 	// conc.ConcFunc()
 	// conc2.Conc2Func()
 	//sel.SelectFunc()
-	mut.MutFunc()
+	// mut.MutFunc()
+	oop.OOPFunc()
 }
