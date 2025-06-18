@@ -1,53 +1,40 @@
 package main
 
 import (
-	// iandi "learngo/01-iandi"
-	// helloworld "learngo/02-helloworld"
-	// variables "learngo/03-variables"
-	// datatypes "learngo/04-datatypes"
-	// constants "learngo/05-constants"
-	// funcs "learngo/06-functions"
-	// packages "learngo/07-packages"
-	// ifelse "learngo/08-ifelse"
-	// loops "learngo/09-loops"
-	// switches "learngo/10-switch"
-	// arraysandslices "learngo/11-arraysandslices"
-	// varfuncs "learngo/12-variadicfunctions"
-	// maps "learngo/13-maps"
-	// strings "learngo/14-strings"
-	// pointers "learngo/15-pointers"
-	// structs "learngo/16-structs"
-	// methods "learngo/17-methods"
-	// ifaces "learngo/18-interfaces"
-	// conc "learngo/19-conc"
-	// conc2 "learngo/20-conc2"
-	// sel "learngo/21-select"
-	// mut "learngo/22-mutex"
-	oop "learngo/23-oop"
+	// intro "learngo/01-intro"
+	// vars "learngo/02-variables"
+	// funcs "learngo/03-funcAndPack"
+	// cntrl "learngo/04-cntrlFlow"
+	// asv "learngo/05-asv"
+	// ms "learngo/06-ms"
+	// psm "learngo/07-psm"
+	// ifaces "learngo/08-ifaces"
+	// conc "learngo/09-conc"
+	oop "learngo/10-oop"
 )
 
 func main() {
-	// iandi.IAndI()
-	// helloworld.HelloWorld()
-	// variables.Variables()
-	// datatypes.DataTypes()
-	// constants.CtoFunc()
+	// intro.IAndI()
+	// intro.HelloWorld()
+	// vars.Variables()
+	// vars.DataTypes()
+	// vars.CtoFunc()
 	// funcs.Funcs()
-	// packages.LearnPackages()
-	// ifelse.IfElse()
-	// loops.Loops()
-	// switches.SwitchFunc()
-	// arraysandslices.ArraysAndSlices()
-	// varfuncs.VarFuncs()
-	// maps.MapFuncs()
-	// strings.StringFuncs()
-	// pointers.PointerFuncs()
-	// structs.StructFuncs()
-	// methods.MethodFuncs()
+	// funcs.LearnPackages()
+	// cntrl.IfElse()
+	// cntrl.Loops()
+	// cntrl.SwitchFunc()
+	// asv.ArraysAndSlices()
+	// asv.VarFuncs()
+	// ms.MapFuncs()
+	// ms.StringFuncs()
+	// psm.PointerFuncs()
+	// psm.StructFuncs()
+	// psm.MethodFuncs()
 	// ifaces.InterfaceFuncs()
 	// conc.ConcFunc()
-	// conc2.Conc2Func()
-	//sel.SelectFunc()
-	// mut.MutFunc()
+	// conc.Conc2Func()
+	// conc.SelectFunc()
+	// conc.MutFunc()
 	oop.OOPFunc()
 }
