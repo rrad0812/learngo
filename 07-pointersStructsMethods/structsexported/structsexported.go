@@ -2,7 +2,7 @@ package structsexported
 
 import (
 	"fmt"
-	"learngo/07-psm/structsexported/computer"
+	"learngo/07-pointersStructsMethods/structsexported/computer"
 )
 
 func StructExported() {

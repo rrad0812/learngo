@@ -49,7 +49,7 @@ package psm
 
 import (
 	"fmt"
-	stexp "learngo/07-psm/structsexported"
+	stexp "learngo/07-pointersStructsMethods/structsexported"
 )
 
 type Employee struct {
