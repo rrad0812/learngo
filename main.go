@@ -39,5 +39,8 @@ func main() {
 	// conc.MutFunc()
 	// oop.OOPFunc()
 	// de.DeferFunc()
-	de.ErrorFunc()
+	// de.ErrorFunc()
+	// de.CustomError()
+	// de.WrappError()
+	de.PanicRecoverFunc()
 }
