@@ -22,7 +22,9 @@ package de
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
+	"path/filepath"
 )
 
 func errFileNotFound() {
@@ -77,12 +79,10 @@ implementira ovaj interfejs može se koristiti kao error. Ova metoda pruža opis
 greške.
 
 Prilikom ispisivanja greške, fmt.Println funkcija interno poziva Error() string
-metodu da bi dobila opis greške. Ovako je opis greške ispisan gornjeg primera
-programa.
+metodu da bi dobila opis greške.
 
 Različiti načini za izvlačenje više informacija o grešci
 --------------------------------------------------------
-
 Sada kada znamo da je "error" tip interfejsa, hajde da vidimo kako možemo izvući
 više informacija o grešci.
 
@@ -97,11 +97,11 @@ Možemo analizirati ovu poruku o grešci i dobiti putanju do datoteke "/test.txt
 koja je izazvala grešku, ali ovo je prljav način. Opis greške se može promeniti
 u bilo kom trenutku u novijim verzijama Go-a i naš kod će se pokvariti.
 
-Postoji i bolji način da se više informacija o grešci:
+Postoji i bolji način da se da više informacija o grešci:
 
 1. Konvertovanje greške u osnovni tip i preuzimanje dodatnih informacija iz
    strukturnih polja
-
+-------------------------------------------------------------------------------
    Ako pažljivo pročitate dokumentaciju funkcije Open, možete videti da ona
    vraća grešku tipa *PathError. PathError, što je struktura, a njena
    implementacija u standardnoj biblioteci je sledeća:
@@ -116,19 +116,15 @@ Postoji i bolji način da se više informacija o grešci:
 		return e.Op + " " + e.Path + ": " + e.Err.Error()
 	}
 
-Ukoliko ste zainteresovani da znate gde se nalazi gore navedeni izvorni kod,
-možete ga pronaći ovde
-https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/io/fs/fs.go;l=250.
-
-Iz gornjeg koda možete razumeti da *PathError implementira error interface
-deklarisanjem Error() string metode. Ova metoda spaja operaciju, putanju i
-stvarnu grešku i vraća je. Tako smo dobili poruku o grešci,
+	Iz gornjeg koda možete razumeti da *PathError implementira error interface
+	deklarisanjem Error() string metode. Ova metoda spaja operaciju, putanju i
+	stvarnu grešku i vraća je. Tako smo dobili poruku o grešci,
 
 	>> open /test.txt: No such file or directory
 
-Polje Paths trukture PathError sadrži putanju datoteke koja je izazvala grešku.
-Možemo koristiti funkciju As iz paketa errors da konvertujemo grešku u njen
-osnovni tip.
+	Polje Paths strukture PathError sadrži putanju datoteke koja je izazvala
+	grešku. Možemo koristiti funkciju As iz paketa errors da konvertujemo
+	grešku u njen osnovni tip.
 
 Opis funkcije As govori o lancu grešaka. Molimo vas da ga za sada ignorišete.
 Razumećemo kako lanac grešaka i prelamanje funkcionišu u posebnom tutorijalu.
@@ -139,8 +135,9 @@ Program će stvari razjasniti. Hajde da izmenimo program koji smo gore napisali
 i ispišemo putanju koristeći "As" funkciju.
 */
 
-func errAs() {
-	fmt.Println("\n --- Error As ---")
+func errAsPathError() {
+
+	fmt.Println("\n --- errAsPathError ---")
 
 	f, err := os.Open("test.txt")
 	if err != nil {
@@ -156,58 +153,67 @@ func errAs() {
 }
 
 /*
-Trči na igralištu
+U gornjem programu, prvo proveravamo da li je greška nil, a zatim koristimo As
+funkciju da konvertujemo err u *os.PathError. Ako je konverzija uspešna, As
+vraća true. Zatim ispisujemo putanju koristeći pErr.Path.
 
-U gornjem programu, prvo proveravamo da li je greška nilu liniji br. 11, a zatim koristimo Asfunkciju u liniji br. 13 da je konvertujemo erru *os.PathError. Ako je konverzija uspešna, Asvratiće se true. Zatim ispisujemo putanju koristeći pErr.Pathu liniji br. 14.
+Ako se pitate zaštoje  pErr pokazivač, razlog je taj što je interfejs za greške
+implementiran pokazivačem PathError i stoga pErr je pokazivač. Donji kod
+pokazuje da *PathError implementira interfejs za greške.
 
-Ako se pitate zašto pErrje pokazivač, razlog je taj što je interfejs za greške implementiran pokazivačem PathErrori stoga pErrje pokazivač. Donji kod pokazuje da *PathErrorimplementira interfejs za greške.
+func (e *PathError) Error() string {
+	return e.Op + " " + e.Path + ": " + e.Err.Error()
+}
 
-func (e *PathError) Error() string { return e.Op + " " + e.Path + ": " + e.Err.Error() }
+Funkcija As zahteva da drugi argument bude pokazivač na tip koji implementira
+grešku. Stoga prosleđujemo &perr.
 
-Funkcija Aszahteva da drugi argument bude pokazivač na tip koji implementira grešku. Stoga prosleđujemo &perr.
+Ovaj program ispisuje,
 
-Ovaj program izlazi,
+	>> Failed to open file at path test.txt
 
-Failed to open file at path test.txt
+U slučaju da osnovna greška nije tipa *os.PathError biće ispisana generička
+poruka o grešci.
 
-U slučaju da osnovna greška nije tipa *os.PathError, kontrola će doći do linije br. 17 i biće ispisana generička poruka o grešci.
+Na ovaj način uspešno smo koristili As funkciju da dobijemo putanju do datoteke
+iz greške.
 
-Odlično 😃. Uspešno smo koristili Asfunkciju da dobijemo putanju do datoteke iz greške.
 2. Prikupljanje više informacija korišćenjem metoda
-
-Drugi način da se dobije više informacija o grešci jeste da se otkrije osnovni tip i dobije više informacija pozivanjem metoda na tipu strukture .
+-------------------------------------------------------------------------------
+Drugi način da se dobije više informacija o grešci jeste da se otkrije osnovni
+tip i dobijemo više informacija pozivanjem metoda na tipu strukture.
 
 Hajde da ovo bolje razumemo pomoću jednog primera.
 
 Tip strukture DNSError u standardnoj biblioteci je definisan na sledeći način,
 
-type DNSError struct {
-    ...
-}
+	>> type DNSError struct {
+	>>     ...
+	>> }
+	>>
+	>> func (e *DNSError) Error() string {
+	>>     ...
+	>> }
+	>> func (e *DNSError) Timeout() bool {
+	>>     ...
+	>> }
+	>> func (e *DNSError) Temporary() bool {
+	>>     ...
+	>> }
 
-func (e *DNSError) Error() string {
-    ...
-}
-func (e *DNSError) Timeout() bool {
-    ...
-}
-func (e *DNSError) Temporary() bool {
-    ...
-}
+Struktura DNSError ima dve metode Timeout() bool i Temporary() bool koje vraćaju
+bulovu vrednost koja pokazuje da li je greška nastala zbog isteka vremena ili je
+privremena.
 
-Struktura DNSErrorima dve metode Timeout() booli Temporary() boolkoje vraćaju bulovsku vrednost koja pokazuje da li je greška nastala zbog isteka vremena ili je privremena.
+Hajde da napišemo program koji konvertuje grešku u *DNSError tip i poziva gore
+pomenute metode da bismo utvrdili da li je greška privremena ili je nastala
+zbog isteka vremena.
+*/
 
-Hajde da napišemo program koji konvertuje grešku u *DNSErrortip i poziva gore pomenute metode da bismo utvrdili da li je greška privremena ili je nastala zbog isteka vremena.
+func errAsDNSError() {
 
-package main
+	fmt.Println("\n --- errAsDNSError ---")
 
-import (
-	"errors"
-	"fmt"
-	"net"
-)
-
-func main() {
 	addr, err := net.LookupHost("golangbot123.com")
 	if err != nil {
 		var dnsErr *net.DNSError
@@ -229,40 +235,48 @@ func main() {
 	fmt.Println(addr)
 }
 
-Napomena: DNS pretrage ne rade u Playground-u. Molimo vas da pokrenete ovaj program na vašem lokalnom računaru.
+/*
+Napomena: DNS pretrage ne rade u Playground-u. Molimo vas da pokrenete ovaj
+program na vašem lokalnom računaru.
 
-U gornjem programu, u redu br. 9, pokušavamo da dobijemo IP adresu nevažećeg imena domena golangbot123.com. U redu br. 13 dobijamo osnovnu vrednost greške korišćenjem Asfunkcije i konvertovanjem u *net.DNSError. Zatim proveravamo da li je greška nastala zbog isteka vremena ili je privremena u redovima br. 14 i 18, respektivno.
+U gornjem programu pokušavamo da dobijemo IP adresu nevažećeg imena domena
+golangbot123.com. Dobijamo osnovnu vrednost greške korišćenjem As funkcije i
+konvertovanjem u *net.DNSError. Zatim proveravamo da li je greška nastala zbog
+isteka vremena ili je privremena.
 
-U našem slučaju, greška nije ni privremena niti je nastala zbog isteka vremena i stoga će program ispisati,
+U našem slučaju, greška nije ni privremena niti je nastala zbog isteka vremena
+i stoga će program ispisati,
 
-Generic DNS error lookup golangbot123.com: no such host
+	>> Generic DNS error lookup golangbot123.com: no such host
 
-Ako je greška bila privremena ili je nastala zbog isteka vremena, onda bi se odgovarajuća if naredba izvršila i možemo je obraditi na odgovarajući način.
+Ako je greška bila privremena ili je nastala zbog isteka vremena, onda bi se
+odgovarajuća if naredba izvršila i možemo je obraditi na odgovarajući način.
+
 3. Direktno poređenje
+-------------------------------------------------------------------------------
+Treći način da se dobije više detalja o grešci je direktno poređenje sa
+promenljivom tipa error. Hajde da ovo razumemo pomoću primera.
 
-Treći način da se dobije više detalja o grešci je direktno poređenje sa promenljivom tipa error. Hajde da ovo razumemo pomoću primera.
+Funkcija "Glob" paketa "filepath" se koristi za vraćanje imena svih datoteka
+koje  odgovaraju šablonu. Ova funkcija vraća grešku "ErrBadPattern" kada je
+šablon pogrešno oblikovan.
 
-Funkcija Glob paketa filepathse koristi za vraćanje imena svih datoteka koje odgovaraju šablonu. Ova funkcija vraća grešku ErrBadPatternkada je šablon pogrešno oblikovan.
+"ErrBadPattern" je definisan u "filepath" paketu kao globalna promenljiva.
 
-ErrBadPattern je definisan u filepathpaketu kao globalna promenljiva.
+	>> var ErrBadPattern = errors.New("syntax error in pattern")
 
-1var ErrBadPattern = errors.New("syntax error in pattern")
+errors.New() se koristi za kreiranje nove greške. O tome ćemo detaljno
+razgovarati u sledećem tutorijalu.
 
-errors.New() se koristi za kreiranje nove greške. O tome ćemo detaljno razgovarati u sledećem tutorijalu .
-
-Funkcija Glob vraća grešku ErrBadPattern kada je šablon neispravan.
+Funkcija "Glob" vraća grešku "ErrBadPattern" kada je šablon neispravan.
 
 Hajde da napišemo mali program za proveru ove greške.
+*/
 
-package main
+func errIsFilePathErrorPattern() {
 
-import (
-	"errors"
-	"fmt"
-	"path/filepath"
-)
+	fmt.Println("\n --- errIsFilePathErrorPattern ---")
 
-func main() {
 	files, err := filepath.Glob("[")
 	if err != nil {
 		if errors.Is(err, filepath.ErrBadPattern) {
@@ -275,43 +289,58 @@ func main() {
 	fmt.Println("matched files", files)
 }
 
-U gornjem programu tražimo datoteke šablona [koji je neispravan šablon. Proveravamo da li greška nije jednaka nil. Da bismo dobili više informacija o grešci, direktno je upoređujemo sa greškom filepath.ErrBadPatternu liniji br. 11 koristeći funkciju Is . Slično kao As, Isfunkcija radi na lancu grešaka. Više o ovome ćemo saznati u našem sledećem tutorijalu . Za potrebe ovog tutorijala, Isfunkcija se može smatrati vraćajućom trueako su obe greške koje su joj prosleđene iste.
+/*
+U gornjem programu tražimo datoteke po šablonu [ koji je neispravan šablon.
+Proveravamo da li greška nije jednaka nil. Da bismo dobili više informacija o
+grešci, direktno je upoređujemo sa greškom "filepath.ErrBadPattern" koristeći
+funkciju "Is". Slično kao "As", "Is" funkcija radi na lancu grešaka. Više o
+ovome ćemo saznati u našem sledećem tutorijalu. Za potrebe ovog tutorijala, "Is"
+funkcija se može smatrati da vraća true ako su obe greške koje su joj prosleđene
+iste.
 
-Vraća vrednost Is„true“ u redu br. 12 jer je greška nastala zbog pogrešno oblikovanog obrasca. Ovaj program će ispisati,
+Ovde, "Is" vraća "true" jer je greška nastala zbog pogrešno oblikovanog šablona.
+Ovaj program će ispisati,
 
-Bad pattern error: syntax error in pattern
+	>> Bad pattern error: syntax error in pattern
 
-Standardna biblioteka koristi bilo koji od gore navedenih načina da pruži više informacija o grešci. Koristićemo ove načine u sledećem tutorijalu da kreiramo sopstvene prilagođene greške .
+Standardna biblioteka koristi bilo koji od gore navedenih načina da pruži više
+informacija o grešci. Koristićemo ove načine u sledećem tutorijalu da kreiramo
+sopstvene prilagođene greške.
 
 Ne ignorišite greške
+--------------------
+Nikada ne ignorišite grešku. Ignorisanje grešaka je poziv na probleme.
+Dozvolite mi da prepišem primer koji navodi imena svih datoteka koje odgovaraju
+obrascu i ignoriše greške.
+*/
 
-Nikada ne ignorišite grešku. Ignorisanje grešaka je poziv na probleme. Dozvolite mi da prepišem primer koji navodi imena svih datoteka koje odgovaraju obrascu ignorišući greške.
+func errIgnored() {
 
-package main
+	fmt.Println("\n --- errIgnored ---")
 
-import (
-	"fmt"
-	"path/filepath"
-)
-
-func main() {
 	files, _ := filepath.Glob("[")
 	fmt.Println("matched files", files)
 }
 
-Trčanje na igralištu
-
-Već znamo iz prethodnog primera da je šablon nevažeći. Ignorisao sam grešku koju je Globfunkcija vratila koristeći _prazan identifikator u redu br. 9. Jednostavno sam ispisao podudarne datoteke u redu br. 10. Ovaj program će ispisati,
+/*
+Već znamo iz prethodnog primera da je šablon nevažeći. Ignorisao sam grešku koju
+je "Glob" funkcija vratila koristeći "_" prazan identifikator. Jednostavno sam
+ispisao podudarne datoteke. Ovaj program će ispisati,
 
 matched files []
 
-Pošto smo ignorisali grešku, izlaz izgleda kao da nijedna datoteka ne odgovara šablonu, ali je sam šablon zapravo pogrešno oblikovan. Zato nikada ne ignorišite greške.
+Pošto smo ignorisali grešku, izlaz izgleda kao da nijedna datoteka ne odgovara
+šablonu, ali je sam šablon zapravo pogrešno oblikovan. Zato nikada ne ignorišite
+greške.
 */
 
 func ErrorFunc() {
+
 	fmt.Println("\n --- Errors ---")
 
 	errFileNotFound()
-	errAs()
-
+	errAsPathError()
+	errAsDNSError()
+	errIsFilePathErrorPattern()
+	errIgnored()
 }
