@@ -57,7 +57,6 @@ package de
 
 import (
 	"fmt"
-	"runtime/debug"
 )
 
 // func fullName(firstName *string, lastName *string) {
@@ -328,37 +327,37 @@ Postoji način da se odštampa trag steka koristeći funkciju PrintStack iz Debu
 paketa:
 */
 
-func recoverFullName2() {
-	if r := recover(); r != nil {
-		fmt.Println("recovered from ", r)
-		debug.PrintStack()
-	}
-}
+// func recoverFullName2() {
+// 	if r := recover(); r != nil {
+// 		fmt.Println("recovered from ", r)
+// 		debug.PrintStack()
+// 	}
+// }
 
-func fullName2(firstName *string, lastName *string) {
+// func fullName2(firstName *string, lastName *string) {
 
-	defer recoverFullName2()
+// 	defer recoverFullName2()
 
-	if firstName == nil {
-		panic("runtime error: first name cannot be nil")
-	}
-	if lastName == nil {
-		panic("runtime error: last name cannot be nil")
-	}
-	fmt.Printf("%s %s\n", *firstName, *lastName)
-	fmt.Println("returned normally from fullName2")
-}
+// 	if firstName == nil {
+// 		panic("runtime error: first name cannot be nil")
+// 	}
+// 	if lastName == nil {
+// 		panic("runtime error: last name cannot be nil")
+// 	}
+// 	fmt.Printf("%s %s\n", *firstName, *lastName)
+// 	fmt.Println("returned normally from fullName2")
+// }
 
-func recoverExample2() {
+// func recoverExample2() {
 
-	fmt.Println("\n --- Recover example2---")
+// 	fmt.Println("\n --- Recover example2---")
 
-	defer fmt.Println("deferred call in recoverExample2")
+// 	defer fmt.Println("deferred call in recoverExample2")
 
-	firstName := "Elon"
-	fullName2(&firstName, nil)
-	fmt.Println("returned normally from recoverExample2")
-}
+// 	firstName := "Elon"
+// 	fullName2(&firstName, nil)
+// 	fmt.Println("returned normally from recoverExample2")
+// }
 
 /*
 U gornjem programu, koristimo "debug.PrintStack()" za ispis traga steka.
@@ -406,61 +405,61 @@ func recovery() {
 	}
 }
 
-func sum(a int, b int) {
+func sum(a int, b int, ch chan int) {
 
 	defer recovery()
+	defer close(ch)
+
+	if a == (-b) {
+		panic("sum error: a can't be eq (-b)")
+	}
 
 	fmt.Printf("%d + %d = %d\n", a, b, a+b)
-	done := make(chan bool)
-	go divide(a, b, done)
-	<-done
+
+	ch <- (a + b)
 }
 
-func divide(a int, b int, done chan bool) {
-	fmt.Printf("%d / %d = %d", a, b, a/b)
-	done <- true
+func div(a int, b int, ch chan int) {
+
+	defer recovery()
+	defer close(ch)
+
+	if b == 0 {
+		panic("div error: Divide by 0")
+	}
+
+	fmt.Printf("%d / %d = %d\n", a, b, a/b)
+
+	ch <- (a / b)
 }
 
 func recoverGoroutine() {
 	fmt.Println("\n --- Recover goroutine ---")
-	sum(5, 0)
-	fmt.Println("normally returned from main")
+
+	d1 := make(chan int)
+	d2 := make(chan int)
+
+	go sum(5, -5, d1)
+	go div(5, 0, d2)
+
+	fmt.Println("d1 is", <-d1, "d2 is", <-d2)
+
+	fmt.Println("normally returned from recoverGoroutine")
 }
 
 /*
-U gornjem programu, funkcija divide()će izazvati paniku jer je b nula a nije
-moguće podeliti broj sa nulom. Funkcija sum() poziva odloženu funkciju recovery()
-koja se koristi za oporavak od panike. Funkcija divide() se poziva kao posebna
-gorutina. Čekamo na done kanalu da bismo osigurali da se divide() izvršavanje
-završi.
+U gornjem programu, kod je prepravljen na ispravan. Treba zapamtiti da se ne
+može uraditi recover sem iz iste gorutine.
 
-Šta mislite da će biti izlaz programa. Da li će se panika oporaviti? Odgovor je
-ne. Panika se neće oporaviti. To je zato što recovery je funkcija prisutna u
-drugoj gorutini i panika se dešava u divide() funkciji u drugoj gorutini.
-Stoga oporavak nije moguć.
+U funkciji sum() izazivamo paniku ako je a == (-b). U istoj gorutini radimo
+recover.
 
-Pokretanje ovog programa će ispisati,
+Slično je sa funkcijom divide, ako je b == 0, go runtime će izazvati paniku.
 
-	>> 5 + 0 = 5
-	>> panic: runtime error: integer divide by zero
-	>>
-	>> goroutine 18 [running]:
-	>> main.divide(0x5, 0x0, 0xc0000a2000)
-	>> 	/tmp/sandbox877118715/prog.go:22 +0x167
-	>> created by main.sum
-	>> 	/tmp/sandbox877118715/prog.go:17 +0x1a9
+U obe funkcije odlažemo recover, tako da prekidamo niz isključenja programa.
 
-Iz rezultata možete videti da se oporavak nije dogodio.
-
-Ako divide() se funkcija pozove u istoj gorutini, oporavili bismo se od panike.
-
-Ako se red sa  go divide(a, b, done) na divide(a, b, done) oporavak će se
-desiti jer se panika dešava u istoj gorutini. Ako se program pokrene sa gore
-navedenom promenom, ispisaće
-
-	>> 5 + 0 = 5
-	>> recovered: runtime error: integer divide by zero
-	>> normally returned from main
+Rezultat je različit za razne vrednosti a i b. U svakom slučaju oporavak, ako
+ima potrebe se događa.
 */
 
 func PanicRecoverFunc() {
@@ -471,7 +470,7 @@ func PanicRecoverFunc() {
 	// panicWithDefer()
 	recoverExample()
 	recoverInvalidSliceAccess()
-	recoverExample2()
+	// recoverExample2()
 	recoverGoroutine()
 
 }
