@@ -11,7 +11,9 @@ import (
 	// ifaces "learngo/08-ifaces"
 	// conc "learngo/09-conc"
 	// oop "learngo/10-oop"
-	de "learngo/11-deferAndError"
+	// de "learngo/11-deferAndError"
+	// fcf "learngo/12-firstClassFunctions"
+	ref "learngo/13-refleksija"
 )
 
 func main() {
@@ -42,5 +44,7 @@ func main() {
 	// de.ErrorFunc()
 	// de.CustomError()
 	// de.WrappError()
-	de.PanicRecoverFunc()
+	// de.PanicRecoverFunc()
+	// fcf.FcfFunc()
+	ref.RefFunc()
 }

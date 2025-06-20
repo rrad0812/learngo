@@ -75,27 +75,7 @@ Podrška za konkurentnost u Gou
 Konkurentnost je sastavni deo programskog jezika Go. Konkurentnost se u Go-u
 obrađuje pomoću goroutina i kanala. O njima ćemo detaljno razgovarati u
 narednim tutorijalima.
-*/
 
-func ConcFunc() {
-	fmt.Println("\n --- Intro to concurency  ---")
-
-	concGoFunc()
-	concGoWithTimeOutFunc()
-	concGoMultiFunc()
-	concChannelFunc()
-	concGoChannelFunc()
-	concGoChannelSleepFunc()
-	concGoCalcSquaresAndCubes()
-	// channelPanic()
-	// unidirectionalCannels()
-	concConvBiToUniChannel()
-	concGoChannelClose()
-	concGoChannelCloseForRange()
-	concGoMultiFunc2()
-}
-
-/*
 Gorutine
 ========
 
@@ -717,3 +697,20 @@ Ovaj program će takođe ispisati:
 
 	>> Final output 1536
 */
+func ConcFunc() {
+	fmt.Println("\n --- Intro to concurency  ---")
+
+	concGoFunc()
+	concGoWithTimeOutFunc()
+	concGoMultiFunc()
+	concChannelFunc()
+	concGoChannelFunc()
+	concGoChannelSleepFunc()
+	concGoCalcSquaresAndCubes()
+	// channelPanic()
+	// unidirectionalCannels()
+	concConvBiToUniChannel()
+	concGoChannelClose()
+	concGoChannelCloseForRange()
+	concGoMultiFunc2()
+}
