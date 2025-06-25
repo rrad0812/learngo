@@ -13,7 +13,8 @@ import (
 	// oop "learngo/10-oop"
 	// de "learngo/11-deferAndError"
 	// fcf "learngo/12-firstClassFunctions"
-	ref "learngo/13-refleksija"
+	// ref "learngo/13-refleksija"
+	fl "learngo/14-files"
 )
 
 func main() {
@@ -46,5 +47,7 @@ func main() {
 	// de.WrappError()
 	// de.PanicRecoverFunc()
 	// fcf.FcfFunc()
-	ref.RefFunc()
+	// ref.RefFunc()
+	fl.ReadFiles()
+	fl.WriteFiles()
 }
